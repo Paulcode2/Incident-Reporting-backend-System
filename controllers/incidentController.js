@@ -2,15 +2,33 @@ const Incident = require("../models/Incident");
 
 // Create
 const reportIncident = async (req, res) => {
-  const incident = await Incident.create({
-    title: req.body.title,
+  try {
+    const { title, description } = req.body;
 
-    description: req.body.description,
+    if (!title || !description) {
+      return res.status(400).json({
+        message: "Title and description are required.",
+      });
+    }
+    const incident = await Incident.create({
+      title,
+      description,
+      image: req.file ? req.file.path : "",
+      reportedBy: req.user.id,
+    });
 
-    reportedBy: req.user.id,
-  });
+    res.status(201).json({
+      message: "Incident reported successfully.",
 
-  res.status(201).json(incident);
+      incident,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+
+  //   res.status(201).json(incident);
 };
 
 // Get All
@@ -24,21 +42,35 @@ const getIncidents = async (req, res) => {
 
 // Update
 const updateIncident = async (req, res) => {
-  const incident = await Incident.findById(req.params.id);
+  try {
+    const incident = await Incident.findById(req.params.id);
 
-  if (!incident) {
-    return res.status(404).json({
-      message: "Not found",
+    if (!incident) {
+      return res.status(404).json({
+        message: "Incident not found.",
+      });
+    }
+
+    incident.title = req.body.title || incident.title;
+
+    incident.description = req.body.description || incident.description;
+
+    if (req.file) {
+      incident.image = req.file.path;
+    }
+
+    await incident.save();
+
+    res.status(200).json({
+      message: "Incident updated successfully.",
+
+      incident,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
     });
   }
-
-  incident.title = req.body.title || incident.title;
-
-  incident.description = req.body.description || incident.description;
-
-  await incident.save();
-
-  res.json(incident);
 };
 
 // Delete
